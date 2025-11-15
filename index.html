@@ -17,11 +17,17 @@
       padding: 0 1rem;
     }
     
-    .youtube-widget h2 {
+    .video-section {
+      margin-bottom: 3rem;
+    }
+    
+    .section-heading {
       color: #4CB3B9;
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       margin: 0 0 1.5rem;
-      text-align: center;
+      font-weight: 600;
+      border-bottom: 3px solid #4CB3B9;
+      padding-bottom: 0.5rem;
     }
     
     .videos-grid {
@@ -110,17 +116,6 @@
       font-size: .85rem;
     }
     
-    .video-source {
-      display: inline-block;
-      margin-top: .5rem;
-      padding: .25rem .5rem;
-      background: #4CB3B9;
-      color: white;
-      font-size: .75rem;
-      border-radius: 4px;
-      font-weight: 500;
-    }
-    
     .loading {
       text-align: center;
       padding: 2rem;
@@ -195,9 +190,20 @@
 </head>
 <body>
   <section class="youtube-widget">
-    <h2>Featured EHBEA Plenaries</h2>
-    <div id="videos-container" class="videos-grid">
-      <div class="loading">Loading videos...</div>
+    <!-- Channel Videos Section -->
+    <div class="video-section">
+      <h2 class="section-heading">EHBEA 2025 Plenaries - Northumbria University, UK</h2>
+      <div id="channel-videos-container" class="videos-grid">
+        <div class="loading">Loading videos...</div>
+      </div>
+    </div>
+    
+    <!-- Playlist Videos Section -->
+    <div class="video-section">
+      <h2 class="section-heading">Plenaries from Previous Years</h2>
+      <div id="playlist-videos-container" class="videos-grid">
+        <div class="loading">Loading videos...</div>
+      </div>
     </div>
   </section>
   
@@ -222,15 +228,14 @@
           fetchPlaylistVideos()
         ]);
         
-        // Combine and sort by date (newest first)
-        const allVideos = [...channelVideos, ...playlistVideos]
-          .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-        
-        displayVideos(allVideos);
+        displayChannelVideos(channelVideos);
+        displayPlaylistVideos(playlistVideos);
       } catch (error) {
         console.error('Error loading videos:', error);
-        document.getElementById('videos-container').innerHTML = 
-          '<div class="error">Unable to load videos. Please check your API key and try again.</div>';
+        document.getElementById('channel-videos-container').innerHTML = 
+          '<div class="error">Unable to load channel videos.</div>';
+        document.getElementById('playlist-videos-container').innerHTML = 
+          '<div class="error">Unable to load playlist videos.</div>';
       }
     }
 
@@ -249,8 +254,7 @@
           videoId: video.id.videoId,
           title: video.snippet.title,
           thumbnail: video.snippet.thumbnails.medium.url,
-          publishedAt: video.snippet.publishedAt,
-          source: 'Channel'
+          publishedAt: video.snippet.publishedAt
         }));
       } catch (error) {
         console.error('Error fetching channel videos:', error);
@@ -273,8 +277,7 @@
           videoId: video.snippet.resourceId.videoId,
           title: video.snippet.title,
           thumbnail: video.snippet.thumbnails.medium.url,
-          publishedAt: video.snippet.publishedAt,
-          source: 'Playlist'
+          publishedAt: video.snippet.publishedAt
         }));
       } catch (error) {
         console.error('Error fetching playlist videos:', error);
@@ -282,9 +285,17 @@
       }
     }
 
-    function displayVideos(videos) {
-      const container = document.getElementById('videos-container');
-      
+    function displayChannelVideos(videos) {
+      const container = document.getElementById('channel-videos-container');
+      displayVideos(container, videos);
+    }
+
+    function displayPlaylistVideos(videos) {
+      const container = document.getElementById('playlist-videos-container');
+      displayVideos(container, videos);
+    }
+
+    function displayVideos(container, videos) {
       if (!videos || videos.length === 0) {
         container.innerHTML = '<div class="error">No videos found.</div>';
         return;
@@ -306,7 +317,6 @@
             <div class="video-info">
               <h3 class="video-title">${video.title}</h3>
               <p class="video-date">${publishedAt}</p>
-              <span class="video-source">${video.source}</span>
             </div>
           </article>
         `;
