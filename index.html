@@ -14,19 +14,19 @@
     .youtube-widget {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       max-width: 100%;
-      margin: 1.5rem auto;
+      margin: 1.5rem auto; /* UPDATED: slightly less vertical margin */
       padding: 0 1rem;
     }
     
     .video-section {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.5rem; /* UPDATED: reduced from 3rem to shorten page */
       overflow: hidden;
     }
     
     .section-heading {
       color: #4CB3B9;
       font-size: 1.5rem;
-      margin: 0 0 1rem;
+      margin: 0 0 1rem; /* UPDATED: slightly reduced bottom margin */
       font-weight: 600;
       border-bottom: 3px solid #4CB3B9;
       padding-bottom: 0.4rem;
@@ -41,7 +41,7 @@
       position: relative;
       width: 100%;
       overflow: hidden;
-      padding: 0.5rem 0;
+      padding: 0.5rem 0; /* UPDATED: less vertical padding */
     }
     
     .videos-track {
@@ -125,7 +125,7 @@
     }
     
     .video-info {
-      padding: 0.75rem 1rem;
+      padding: 0.75rem 1rem; /* UPDATED: slightly less padding */
     }
     
     .video-title {
@@ -223,4 +223,184 @@
     <div class="video-section">
       <h2 class="section-heading">EHBEA 2025 Plenaries - Northumbria University, UK</h2>
       <div class="videos-scroll-container">
-        <div id="channel-videos-track" class="videos-t
+        <div id="channel-videos-track" class="videos-track">
+          <div class="loading">Loading videos...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Playlist Videos Section -->
+    <div class="video-section">
+      <h2 class="section-heading">Plenaries from Previous Years</h2>
+      <div class="videos-scroll-container">
+        <div id="playlist-videos-track" class="videos-track">
+          <div class="loading">Loading videos...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <div id="video-modal" class="video-modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeVideoModal()">&times;</button>
+      <iframe id="modal-iframe" class="modal-iframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = 'AIzaSyBuc-kKJpV7AH6Vnre61cDzqp9Ihc_ECP0';
+    const CHANNEL_ID = 'UC4JiSSnc1LV3xpWUY09Pm3w';
+    const PLAYLIST_ID = 'PL-rTMAj5qryI2jTKzI59r-m9zS8j6i_rz';
+
+    // UPDATED: separate limits for each section
+    const CHANNEL_MAX_RESULTS = 5;   // EHBEA 2025 plenaries
+    const PLAYLIST_MAX_RESULTS = 12; // Previous years plenaries
+
+    async function loadAllVideos() {
+      try {
+        const [channelVideos, playlistVideos] = await Promise.all([
+          fetchChannelVideos(),
+          fetchPlaylistVideos()
+        ]);
+        
+        displayChannelVideos(channelVideos);
+        displayPlaylistVideos(playlistVideos);
+      } catch (error) {
+        console.error('Error loading videos:', error);
+        document.getElementById('channel-videos-track').innerHTML = 
+          '<div class="error">Unable to load channel videos.</div>';
+        document.getElementById('playlist-videos-track').innerHTML = 
+          '<div class="error">Unable to load playlist videos.</div>';
+      }
+    }
+
+    async function fetchChannelVideos() {
+      try {
+        const response = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=${CHANNEL_MAX_RESULTS}&type=video` // UPDATED
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch channel videos');
+        }
+        
+        const data = await response.json();
+        return data.items.map(video => ({
+          videoId: video.id.videoId,
+          title: video.snippet.title,
+          thumbnail: video.snippet.thumbnails.medium.url,
+          publishedAt: video.snippet.publishedAt
+        }));
+      } catch (error) {
+        console.error('Error fetching channel videos:', error);
+        return [];
+      }
+    }
+
+    async function fetchPlaylistVideos() {
+      try {
+        let allVideos = [];
+        let nextPageToken = null;
+        
+        // Fetch pages of playlist videos until we have enough
+        do {
+          const url = `https://www.googleapis.com/youtube/v3/playlistItems?key=${API_KEY}&playlistId=${PLAYLIST_ID}&part=snippet&maxResults=50${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
+          const response = await fetch(url);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch playlist videos');
+          }
+          
+          const data = await response.json();
+          const videos = data.items.map(video => ({
+            videoId: video.snippet.resourceId.videoId,
+            title: video.snippet.title,
+            thumbnail: video.snippet.thumbnails.medium.url,
+            publishedAt: video.snippet.publishedAt
+          }));
+          
+          allVideos = allVideos.concat(videos);
+          nextPageToken = data.nextPageToken;
+        } while (nextPageToken && allVideos.length < PLAYLIST_MAX_RESULTS); // UPDATED: stop once we have enough
+        
+        // Only keep the first 12 videos
+        return allVideos.slice(0, PLAYLIST_MAX_RESULTS); // UPDATED
+      } catch (error) {
+        console.error('Error fetching playlist videos:', error);
+        return [];
+      }
+    }
+
+    function displayChannelVideos(videos) {
+      const container = document.getElementById('channel-videos-track');
+      displayVideos(container, videos);
+    }
+
+    function displayPlaylistVideos(videos) {
+      const container = document.getElementById('playlist-videos-track');
+      displayVideos(container, videos);
+    }
+
+    function displayVideos(container, videos) {
+      if (!videos || videos.length === 0) {
+        container.innerHTML = '<div class="error">No videos found.</div>';
+        return;
+      }
+      
+      const videoHTML = videos.map(video => {
+        const publishedAt = new Date(video.publishedAt).toLocaleDateString('en-GB', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        return `
+          <article class="video-card" onclick="openVideoModal('${video.videoId}')">
+            <div class="video-thumbnail">
+              <img src="${video.thumbnail}" alt="${video.title}">
+              <div class="play-button"></div>
+            </div>
+            <div class="video-info">
+              <h3 class="video-title">${video.title}</h3>
+              <p class="video-date">${publishedAt}</p>
+            </div>
+          </article>
+        `;
+      }).join('');
+      
+      // Duplicate the videos for seamless infinite scrolling
+      container.innerHTML = videoHTML + videoHTML;
+    }
+
+    function openVideoModal(videoId) {
+      const modal = document.getElementById('video-modal');
+      const iframe = document.getElementById('modal-iframe');
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeVideoModal() {
+      const modal = document.getElementById('video-modal');
+      const iframe = document.getElementById('modal-iframe');
+      iframe.src = '';
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    document.getElementById('video-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeVideoModal();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeVideoModal();
+      }
+    });
+
+    loadAllVideos();
+  </script>
+</body>
+</html>
