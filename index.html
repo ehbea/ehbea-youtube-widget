@@ -14,22 +14,22 @@
     .youtube-widget {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       max-width: 100%;
-      margin: 2rem auto;
+      margin: 1.5rem auto; /* UPDATED: slightly less vertical margin */
       padding: 0 1rem;
     }
     
     .video-section {
-      margin-bottom: 3rem;
+      margin-bottom: 1.5rem; /* UPDATED: reduced from 3rem to shorten page */
       overflow: hidden;
     }
     
     .section-heading {
       color: #4CB3B9;
       font-size: 1.5rem;
-      margin: 0 0 1.5rem;
+      margin: 0 0 1rem; /* UPDATED: slightly reduced bottom margin */
       font-weight: 600;
       border-bottom: 3px solid #4CB3B9;
-      padding-bottom: 0.5rem;
+      padding-bottom: 0.4rem;
       max-width: 1200px;
       margin-left: auto;
       margin-right: auto;
@@ -41,7 +41,7 @@
       position: relative;
       width: 100%;
       overflow: hidden;
-      padding: 1rem 0;
+      padding: 0.5rem 0; /* UPDATED: less vertical padding */
     }
     
     .videos-track {
@@ -125,13 +125,13 @@
     }
     
     .video-info {
-      padding: 1rem;
+      padding: 0.75rem 1rem; /* UPDATED: slightly less padding */
     }
     
     .video-title {
       font-weight: 600;
       color: #0a2239;
-      margin: 0 0 .5rem;
+      margin: 0 0 .4rem;
       font-size: 1rem;
       line-height: 1.4;
       display: -webkit-box;
@@ -251,7 +251,10 @@
     const API_KEY = 'AIzaSyBuc-kKJpV7AH6Vnre61cDzqp9Ihc_ECP0';
     const CHANNEL_ID = 'UC4JiSSnc1LV3xpWUY09Pm3w';
     const PLAYLIST_ID = 'PL-rTMAj5qryI2jTKzI59r-m9zS8j6i_rz';
-    const MAX_RESULTS_PER_SOURCE = 9;
+
+    // UPDATED: separate limits for each section
+    const CHANNEL_MAX_RESULTS = 5;   // EHBEA 2025 plenaries
+    const PLAYLIST_MAX_RESULTS = 12; // Previous years plenaries
 
     async function loadAllVideos() {
       try {
@@ -274,7 +277,7 @@
     async function fetchChannelVideos() {
       try {
         const response = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=${MAX_RESULTS_PER_SOURCE}&type=video`
+          `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=${CHANNEL_MAX_RESULTS}&type=video` // UPDATED
         );
         
         if (!response.ok) {
@@ -299,7 +302,7 @@
         let allVideos = [];
         let nextPageToken = null;
         
-        // Fetch all pages of playlist videos
+        // Fetch pages of playlist videos until we have enough
         do {
           const url = `https://www.googleapis.com/youtube/v3/playlistItems?key=${API_KEY}&playlistId=${PLAYLIST_ID}&part=snippet&maxResults=50${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
           const response = await fetch(url);
@@ -318,9 +321,10 @@
           
           allVideos = allVideos.concat(videos);
           nextPageToken = data.nextPageToken;
-        } while (nextPageToken);
+        } while (nextPageToken && allVideos.length < PLAYLIST_MAX_RESULTS); // UPDATED: stop once we have enough
         
-        return allVideos;
+        // Only keep the first 12 videos
+        return allVideos.slice(0, PLAYLIST_MAX_RESULTS); // UPDATED
       } catch (error) {
         console.error('Error fetching playlist videos:', error);
         return [];
